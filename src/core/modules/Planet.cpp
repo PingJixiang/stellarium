@@ -1483,7 +1483,14 @@ void Planet::computeTransMatrix(double JD, double JDE)
 			Vec3d J2000NPole;
 			StelUtils::spheToRect(J2000NPoleRA,J2000NPoleDE,J2000NPole);
 
-			Vec3d vsop87Pole(StelCore::matJ2000ToVsop87.multiplyWithoutTranslation(J2000NPole));
+			// Moon tumbling
+			//Vec3d vsop87Pole(StelCore::matJ2000ToVsop87.multiplyWithoutTranslation(J2000NPole));
+			// Moon axis at DE~20, but stable.
+			//Vec3d vsop87Pole(StelCore::matVsop87ToJ2000.multiplyWithoutTranslation(J2000NPole));
+			// Moon ???
+			Vec3d vsop87Pole((J2000NPole));
+			// Moon ???
+			//Vec3d vsop87Pole(StelCore::matJ2000ToVsop87.multiplyWithoutTranslation(J2000NPole));
 
 			double lon, lat;
 			StelUtils::rectToSphe(&lon, &lat, vsop87Pole);
@@ -1600,11 +1607,11 @@ double Planet::getSiderealTime(double JD, double JDE) const
 		// Corrections from Explanatory Supplement 2013. Moon from WGCCRE2009.
 		if (englishName=="Moon")
 		{
-		//	w += -(1.4e-12) *t*t                      + (3.5610)*sin(planetCorrections.E1)
-		//	     +(0.1208)*sin(planetCorrections.E2)  - (0.0642)*sin(planetCorrections.E3)  + (0.0158)*sin(planetCorrections.E4)
-		//	     +(0.0252)*sin(planetCorrections.E5)  - (0.0066)*sin(planetCorrections.E6)  - (0.0047)*sin(planetCorrections.E7)
-		//	     -(0.0046)*sin(planetCorrections.E8)  + (0.0028)*sin(planetCorrections.E9)  + (0.0052)*sin(planetCorrections.E10)
-		//	     +(0.0040)*sin(planetCorrections.E11) + (0.0019)*sin(planetCorrections.E12) - (0.0044)*sin(planetCorrections.E13);
+//			w += /*-(1.4e-12) *t*t     */                 + (3.5610)*sin(planetCorrections.E1)   /* EXPERIMENT:       -(1.4e-12) *t*t */
+//			     +(0.1208)*sin(planetCorrections.E2)  - (0.0642)*sin(planetCorrections.E3)  + (0.0158)*sin(planetCorrections.E4)
+//			     +(0.0252)*sin(planetCorrections.E5)  - (0.0066)*sin(planetCorrections.E6)  - (0.0047)*sin(planetCorrections.E7)
+//			     -(0.0046)*sin(planetCorrections.E8)  + (0.0028)*sin(planetCorrections.E9)  + (0.0052)*sin(planetCorrections.E10)
+//			     +(0.0040)*sin(planetCorrections.E11) + (0.0019)*sin(planetCorrections.E12) - (0.0044)*sin(planetCorrections.E13);
 		}
 		else if (englishName=="Mercury")
 		{
