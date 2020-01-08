@@ -474,7 +474,10 @@ QString Planet::getInfoString(const StelCore* core, const InfoStringGroup& flags
 		// TRANSLATORS: Ecliptical rectangular coordinates
 		oss << QString("%1 XYZ (%2): %3/%4/%5").arg(qc_("Ecliptical","coordinates")).arg(algoName).arg(QString::number(eclPos[0], 'f', 7), QString::number(eclPos[1], 'f', 7), QString::number(eclPos[2], 'f', 7)) << "<br>";
 
-		oss << q_("DEBUG: Sidereal Time of Prime Meridian (angle W): %1°").arg(QString::number(getSiderealTime(core->getJD(), core->getJDE()), 'f', 3)) << "<br>";
+		if (re.method==RotationElements::WGCCRE)
+			oss << q_("DEBUG: Value related to Sidereal Time of Prime Meridian (angle W): %1°").arg(QString::number(getSiderealTime(core->getJD(), core->getJDE()), 'f', 3)) << "<br>";
+		else
+			oss << q_("DEBUG: Sidereal Time of Prime Meridian (NOT angle W): %1°").arg(QString::number(getSiderealTime(core->getJD(), core->getJDE()), 'f', 3)) << "<br>";
 		oss << q_("DEBUG: Axis (RA/Dec): %1°/%2°").arg(QString::number(getCurrentAxisRA()*M_180_PI, 'f', 6), QString::number(getCurrentAxisDE()*M_180_PI, 'f', 6)) << "<br>";
 		oss << q_("DEBUG: RotObliquity: %1°").arg(QString::number(re.obliquity*M_180_PI, 'f', 6)) << "<br>";
 /*
@@ -1482,22 +1485,22 @@ void Planet::computeTransMatrix(double JD, double JDE)
 
 			Vec3d vsop87Pole(StelCore::matJ2000ToVsop87.multiplyWithoutTranslation(J2000NPole));
 
-			double ra, de;
-			StelUtils::rectToSphe(&ra, &de, vsop87Pole);
+			double lon, lat;
+			StelUtils::rectToSphe(&lon, &lat, vsop87Pole);
 			if (englishName=="Moon")
 			{
 				debugAid.append( QString("CTMxR: Moon: J2000NPoleRA: %1 J2000NPoleDE: %2<br/>").arg(StelUtils::radToDecDegStr(J2000NPoleRA)).arg(StelUtils::radToDecDegStr(J2000NPoleDE)));
-				debugAid.append( QString("CTMxR:           RA: %1 DE %2<br/>").arg(StelUtils::radToDecDegStr(ra)).arg(StelUtils::radToDecDegStr(de)));
+				debugAid.append( QString("CTMxR:           &lambda;: %1 &beta; %2<br/>").arg(StelUtils::radToDecDegStr(lon)).arg(StelUtils::radToDecDegStr(lat)));
 			}
 
-			re_obliquity = (M_PI_2 - de);
-			re_ascendingNode = (ra + M_PI_2);
+			re_obliquity = (M_PI_2 - lat);
+			re_ascendingNode = (lon + M_PI_2);
 
 			debugAid.append( QString("CTMxR: Calculated rotational obliquity: %1<br/>").arg(StelUtils::radToDecDegStr(re_obliquity)));
 			debugAid.append( QString("CTMxR: Calculated rotational ascending node: %1<br/>").arg(StelUtils::radToDecDegStr(re_ascendingNode)));
 			re.obliquity=re_obliquity; // WE NEED THIS AGAIN IN getRotObliquity()
 			re.ascendingNode=re_ascendingNode;
-			debugAid.append( QString("CTMxR: Retransform: Pole in VSOP87 coords: &alpha;=%1, &delta;=%2<br/>").arg(StelUtils::radToDecDegStr(ra)).arg(StelUtils::radToDecDegStr(de)));
+			debugAid.append( QString("CTMxR: Retransform: Pole in VSOP87 coords: &lambda;=%1, &beta;=%2<br/>").arg(StelUtils::radToDecDegStr(lon)).arg(StelUtils::radToDecDegStr(lat)));
 			debugAid.append( QString("CTMxR: new re.obliquity=%1, re.ascendingNode=%2<br/>").arg(StelUtils::radToDecDegStr(re.obliquity)).arg(StelUtils::radToDecDegStr(re.ascendingNode)));
 		}
 		else {
@@ -1507,7 +1510,10 @@ void Planet::computeTransMatrix(double JD, double JDE)
 		if (re.method==RotationElements::WGCCRE)
 		{
 			// The new model directly gives a matrix into ICRF, which is practically identical and called VSOP87 for us.
-			setRotEquatorialToVsop87(Mat4d::zrotation(re_ascendingNode) * Mat4d::xrotation(re_obliquity));
+			setRotEquatorialToVsop87(//StelCore::matVsop87ToJ2000*
+						 Mat4d::zrotation(re_ascendingNode) * Mat4d::xrotation(re_obliquity)
+						 //*StelCore::matJ2000ToVsop87
+						 );
 			debugAid.append( QString("CTMx: use WGCCRE: new re.obliquity=%1, re.ascendingNode=%2<br/>").arg(StelUtils::radToDecDegStr(re_obliquity)).arg(StelUtils::radToDecDegStr(re_ascendingNode)));
 		}
 		else
@@ -1786,7 +1792,7 @@ double Planet::getSiderealTime(double JD, double JDE) const
 	// avoid division by zero (typical case for moons with chaotic period of rotation)
 	double rotations = (re.period==0. ? 1.  // moon with chaotic period of rotation
 					  : t / static_cast<double>(re.period));
-	rotations -= floor(rotations); // remove full rotations to limit angle.
+	rotations = remainder(rotations, 1.0); // remove full rotations to limit angle.
 
 	if (englishName=="Jupiter")
 	{
